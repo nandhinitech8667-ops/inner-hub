@@ -74,17 +74,33 @@ const ProductDetail = () => {
   };
 
   const handleBuyNow = async () => {
-    if (!isUserAuthenticated) {
-      navigate(`/login?redirect=/product/${id}`);
-      return;
-    }
-    try {
-      await addToCart(product._id, quantity);
-      navigate('/cart');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to process');
-    }
-  };
+  if (!isUserAuthenticated) {
+    navigate(`/login?redirect=/product/${id}`);
+    return;
+  }
+
+  try {
+    await addToCart(product._id, quantity);
+
+    // ✅ SAVE PRODUCT (for safety on refresh)
+    const checkoutData = {
+      ...product,
+      quantity: quantity
+    };
+
+    localStorage.setItem("checkoutProduct", JSON.stringify(checkoutData));
+
+    // ✅ PASS PRODUCT TO CHECKOUT
+    navigate('/checkout', {
+      state: {
+        selectedProduct: checkoutData
+      }
+    });
+
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Failed to process');
+  }
+};
 
   const handleNextImage = (e) => {
     e.stopPropagation();

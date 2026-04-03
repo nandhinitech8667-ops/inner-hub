@@ -23,7 +23,6 @@ import Orders from './admin/pages/Orders';
 
 // User Components
 import UserLayout from './layouts/UserLayout';
-import UserProtectedRoute from './components/UserProtectedRoute';
 
 // User Pages
 import HomePage from './pages/HomePage';
@@ -31,8 +30,8 @@ import ProductDetail from './pages/ProductDetail';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
-import UserLogin from './pages/UserLogin';
-import UserSignup from './pages/UserSignup';
+import ShopPage from './pages/ShopPage';
+import TrackOrder from './pages/TrackOrder'; // ✅ ADD THIS
 
 function App() {
   return (
@@ -45,25 +44,24 @@ function App() {
               {/* ===== USER ROUTES ===== */}
               <Route element={<UserLayout />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/shop" element={<ShopPage />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
 
-                <Route element={<UserProtectedRoute />}>
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/checkout" element={<CheckoutPage />} />
-                  <Route path="/orders" element={<OrdersPage />} />
-                </Route>
-              </Route>
+                {/* CART + CHECKOUT */}
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
 
-              {/* USER AUTH */}
-              <Route path="/login" element={<UserLogin />} />
-              <Route path="/signup" element={<UserSignup />} />
+                {/* ORDERS */}
+                <Route path="/orders" element={<OrdersPage />} />
+
+                {/* ✅ TRACK ORDER (NEW) */}
+                <Route path="/track/:id" element={<TrackOrder />} />
+              </Route>
 
               {/* ===== ADMIN ROUTES ===== */}
 
-              {/* Admin Login */}
               <Route path="/admin/login" element={<AdminLogin />} />
 
-              {/* Protected Admin */}
               <Route path="/admin" element={<ProtectedRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
@@ -81,11 +79,7 @@ function App() {
             </Routes>
           </BrowserRouter>
 
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            theme="dark"
-          />
+          <ToastContainer position="top-right" autoClose={3000} theme="dark" />
         </CartProvider>
       </UserAuthProvider>
     </AuthProvider>

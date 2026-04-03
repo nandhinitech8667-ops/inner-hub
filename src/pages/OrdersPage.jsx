@@ -7,6 +7,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 const OrdersPage = () => {
   const navigate = useNavigate();
   const { authAxios } = useUserAuth();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,11 +15,12 @@ const OrdersPage = () => {
     fetchOrders();
   }, []);
 
+  // 🔥 FETCH ORDERS
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const res = await authAxios.get('/user/orders');
-      setOrders(res.data);
+      setOrders(res.data || []);
     } catch (error) {
       toast.error('Failed to load orders');
     } finally {
@@ -26,117 +28,159 @@ const OrdersPage = () => {
     }
   };
 
+  // 🔥 STATUS CLASS
   const getStatusClass = (status) => {
     const map = {
-      'Order Placed': 'placed',
-      'Packed': 'packed',
-      'Shipped': 'shipped',
-      'Out for Delivery': 'out-for-delivery',
-      'Delivered': 'delivered'
+      'placed': 'placed',
+      'packed': 'packed',
+      'shipped': 'shipped',
+      'out_for_delivery': 'out-for-delivery',
+      'delivered': 'delivered'
     };
-    return map[status] || 'placed';
+    return map[status?.toLowerCase()] || 'placed';
   };
 
+  // 🔥 DATE FORMAT
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!date) return '';
+    return new Date(date).toLocaleString('en-IN');
   };
 
+  // 🔄 LOADING
   if (loading) {
     return (
-      <div className="spinner-container" style={{ minHeight: '60vh' }}>
-        <div className="spinner"></div>
+      <div style={{ minHeight: '60vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <h3>Loading Orders...</h3>
       </div>
     );
   }
 
   return (
-    <div className="orders-page animate-fade-in">
-      <div className="orders-header">
-        <button className="back-btn" onClick={() => navigate('/')}>
+    <div style={{ padding: "20px" }}>
+      {/* HEADER */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={() => navigate('/')} style={{ padding: "6px 10px" }}>
           <RiArrowLeftLine /> Home
         </button>
-        <h1><RiFileListLine /> My Orders</h1>
+        <h2><RiFileListLine /> My Orders</h2>
       </div>
 
+      {/* EMPTY */}
       {orders.length === 0 ? (
-        <div className="empty-cart">
-          <div className="empty-cart-icon">📋</div>
-          <h2>No orders yet</h2>
-          <p>You haven't placed any orders. Start shopping now!</p>
-          <button className="btn btn-primary" onClick={() => navigate('/')} style={{ marginTop: '16px' }}>
+        <div style={{ textAlign: "center", marginTop: "50px" }}>
+          <h3>No orders yet</h3>
+          <button onClick={() => navigate('/')} style={{ marginTop: "10px" }}>
             Start Shopping
           </button>
         </div>
       ) : (
-        <div className="orders-list">
-          {orders.map((order) => (
-            <div key={order._id} className="order-card">
-              <div className="order-card-header">
-                <div className="order-meta">
-                  <span className="order-id">Order #{order._id.slice(-8).toUpperCase()}</span>
-                  <span className="order-date">{formatDate(order.createdAt)}</span>
-                </div>
-                <div className={`status-badge ${getStatusClass(order.status)}`}>
-                  <span className="status-dot"></span>
-                  {order.status}
-                </div>
+        orders.map((order) => (
+          <div key={order._id} style={styles.card}>
+            
+            {/* HEADER */}
+            <div style={styles.cardHeader}>
+              <div>
+                <strong>Order #{order._id?.slice(-6)}</strong>
+                <p style={{ fontSize: "12px" }}>{formatDate(order.createdAt)}</p>
               </div>
 
-              <div className="order-card-body">
-                {order.products.map((item, idx) => (
-                  <div key={idx} className="order-product-row">
-                    <div className="order-product-icon">
-                      <RiShoppingBagLine />
-                    </div>
-                    <div className="order-product-info">
-                      <span className="order-product-name">{item.name}</span>
-                      <span className="order-product-meta">
-                        Qty: {item.quantity} × ₹{Math.round(item.price).toLocaleString()}
-                      </span>
-                    </div>
-                    <span className="order-product-total">
-                      ₹{Math.round(item.price * item.quantity).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="order-card-footer">
-                {/* Tracking Timeline */}
-                {order.trackingHistory && order.trackingHistory.length > 0 && (
-                  <div className="order-tracking">
-                    <h4>Tracking</h4>
-                    <div className="order-timeline">
-                      {order.trackingHistory.map((track, idx) => (
-                        <div key={idx} className="order-timeline-item">
-                          <div className={`timeline-dot ${idx === order.trackingHistory.length - 1 ? 'active' : ''}`}></div>
-                          <div className="timeline-info">
-                            <span className="timeline-status">{track.status}</span>
-                            <span className="timeline-date">{formatDate(track.date)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="order-total-row">
-                  <strong>Total Amount</strong>
-                  <strong className="order-total-amount">₹{Math.round(order.totalAmount).toLocaleString()}</strong>
-                </div>
-              </div>
+              <span style={{
+                padding: "5px 10px",
+                borderRadius: "5px",
+                background: "#eee"
+              }}>
+                {order.status}
+              </span>
             </div>
-          ))}
-        </div>
+
+            {/* PRODUCTS */}
+            {(order.products || []).map((item, idx) => (
+              <div key={idx} style={styles.productRow}>
+                <RiShoppingBagLine />
+                <div style={{ flex: 1 }}>
+                  <p>{item?.name || "Product"}</p>
+                  <small>
+                    Qty: {item?.quantity || 1} × ₹{item?.price || 0}
+                  </small>
+                </div>
+                <strong>
+                  ₹{(item?.price || 0) * (item?.quantity || 1)}
+                </strong>
+              </div>
+            ))}
+
+            {/* TRACKING */}
+            <div style={{ marginTop: "10px" }}>
+              <h4>Tracking</h4>
+
+              {(order.trackingHistory || []).length === 0 ? (
+                <p style={{ fontSize: "12px" }}>Tracking not available</p>
+              ) : (
+                (order.trackingHistory || []).map((track, i) => (
+                  <div key={i} style={styles.timelineItem}>
+                    <div style={styles.dot}></div>
+                    <div>
+                      <p>{track.status}</p>
+                      <small>{formatDate(track.date)}</small>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* TOTAL */}
+            <div style={styles.total}>
+              <strong>Total</strong>
+              <strong>₹{order.totalAmount || 0}</strong>
+            </div>
+
+          </div>
+        ))
       )}
     </div>
   );
+};
+
+// 🎨 STYLES
+const styles = {
+  card: {
+    border: "1px solid #ddd",
+    padding: "15px",
+    marginBottom: "15px",
+    borderRadius: "8px",
+    background: "#fff"
+  },
+  cardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "10px"
+  },
+  productRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    borderBottom: "1px solid #eee",
+    padding: "8px 0"
+  },
+  timelineItem: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "8px"
+  },
+  dot: {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    background: "green",
+    marginTop: "5px"
+  },
+  total: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "10px",
+    borderTop: "1px solid #eee",
+    paddingTop: "10px"
+  }
 };
 
 export default OrdersPage;

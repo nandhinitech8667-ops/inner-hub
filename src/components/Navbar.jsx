@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { RiSearchLine, RiShoppingCartLine, RiUserLine, RiLogoutBoxRLine, RiFileListLine, RiMenuLine, RiCloseLine } from 'react-icons/ri';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useCart } from '../context/CartContext';
+import { RiShoppingBagLine } from "react-icons/ri";
 
 const Navbar = () => {
   const { user, isUserAuthenticated, logout } = useUserAuth();
@@ -57,6 +58,7 @@ const Navbar = () => {
         </form>
 
         <div className="navbar-actions">
+          <Link to="/shop" className="navbar-cart-btn" id="cart-btn"><RiShoppingBagLine size={20} /> Product</Link>
           <Link to="/cart" className="navbar-cart-btn" id="cart-btn">
             <RiShoppingCartLine />
             {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}

@@ -10,7 +10,7 @@ const UserLogin = () => {
   const redirect = searchParams.get('redirect') || '/';
   const { login, isUserAuthenticated } = useUserAuth();
 
-  const [loginType, setLoginType] = useState('email'); // 'email' or 'mobile'
+  const [loginType, setLoginType] = useState('mobile'); // 'email' or 'mobile'
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -19,33 +19,31 @@ const UserLogin = () => {
   const [error, setError] = useState('');
 
   // Redirect if already logged in
-  if (isUserAuthenticated) {
-    navigate(redirect, { replace: true });
-    return null;
-  }
+  // if (isUserAuthenticated) {
+  //   navigate(redirect, { replace: true });
+  //   return null;
+  // }
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
 
-    const credentials = { password };
-    if (loginType === 'email') {
-      if (!email) { setError('Please enter your email'); return; }
-      credentials.email = email;
-    } else {
-      if (!mobile) { setError('Please enter your mobile number'); return; }
-      credentials.mobile = mobile;
+    if (!mobile) {
+      setError('Enter mobile number');
+      return;
     }
-
-    if (!password) { setError('Please enter your password'); return; }
 
     try {
       setLoading(true);
-      await login(credentials);
-      toast.success('Welcome back!');
-      navigate(redirect, { replace: true });
+
+      const res = await login({ mobile }); // 👈 get response
+
+      console.log("LOGIN SUCCESS", res);
+
+      // 🔥 FORCE NAVIGATION
+       window.location.href = '/cart';
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError('Login failed');
     } finally {
       setLoading(false);
     }
@@ -116,7 +114,7 @@ const UserLogin = () => {
             </div>
           )}
 
-          <div className="login-input-group">
+          {/* <div className="login-input-group">
             <label>Password</label>
             <div className="login-input-wrapper">
               <span className="input-icon-left"><RiLockPasswordLine /></span>
@@ -137,7 +135,7 @@ const UserLogin = () => {
                 {showPassword ? <RiEyeOffLine /> : <RiEyeLine />}
               </button>
             </div>
-          </div>
+          </div> */}
 
           <button
             type="submit"

@@ -1,173 +1,180 @@
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { RiDeleteBinLine, RiAddLine, RiSubtractLine, RiShoppingCartLine, RiArrowLeftLine } from 'react-icons/ri';
-import { toast } from 'react-toastify';
+import React, { useState } from 'react';
+import { useUserAuth } from '../context/UserAuthContext';
 import { useCart } from '../context/CartContext';
+import { RiShoppingCartLine } from 'react-icons/ri';
+import { useNavigate } from 'react-router-dom';
 
 const CartPage = () => {
+  const { login, logout, token, authAxios } = useUserAuth();
+  const { cartItems = [], cartLoading } = useCart();
   const navigate = useNavigate();
-  const { cartItems, cartLoading, updateQuantity, removeItem } = useCart();
 
-  const handleUpdateQuantity = async (itemId, newQuantity) => {
+  const [mobile, setMobile] = useState('');
+  const [showLogoutBox, setShowLogoutBox] = useState(false);
+  const [logoutMobile, setLogoutMobile] = useState('');
+
+  // 🔥 LOGIN
+  const handleLogin = async () => {
+    if (!mobile) {
+      alert("Enter phone number");
+      return;
+    }
+
     try {
-      await updateQuantity(itemId, newQuantity);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update quantity');
+      await login({ mobile });
+
+      // ✅ Save mobile for logout verification
+      localStorage.setItem("userMobile", mobile);
+
+      setMobile('');
+    } catch {
+      alert("Login failed");
     }
   };
 
-  const handleRemove = async (itemId) => {
+  // 🔥 CONFIRM LOGOUT
+  const handleConfirmLogout = () => {
+    if (!logoutMobile) {
+      alert("Enter phone number");
+      return;
+    }
+
+    const savedMobile = localStorage.getItem("userMobile");
+
+    if (logoutMobile !== savedMobile) {
+      alert("Wrong phone number ❌");
+      return;
+    }
+
+    // ✅ Logout
+    logout();
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("userMobile");
+    localStorage.removeItem("cart");
+    localStorage.removeItem("checkoutProduct");
+    sessionStorage.clear();
+
+    setShowLogoutBox(false);
+
+    // ✅ Redirect to home
+    navigate("/");
+  };
+
+  // 🔥 PLACE ORDER
+  const handlePlaceOrder = async () => {
     try {
-      await removeItem(itemId);
-      toast.success('Item removed from cart');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to remove item');
+      await authAxios.post('/user/orders');
+      alert("Order placed successfully ✅");
+      window.location.reload();
+    } catch {
+      alert("Order failed ❌");
     }
   };
 
-  const getDiscountedPrice = (product) => {
-    if (!product) return 0;
-    return product.discount
-      ? product.price - (product.price * product.discount / 100)
-      : product.price;
-  };
-
-  const subtotal = cartItems.reduce((acc, item) => {
-    if (!item.productId) return acc;
-    return acc + item.productId.price * item.quantity;
-  }, 0);
-
-  const totalDiscount = cartItems.reduce((acc, item) => {
-    if (!item.productId || !item.productId.discount) return acc;
-    return acc + (item.productId.price * item.productId.discount / 100) * item.quantity;
-  }, 0);
-
-  const total = subtotal - totalDiscount;
-
-  if (cartLoading) {
+  // 🔐 LOGIN SCREEN
+  if (!token) {
     return (
-      <div className="spinner-container" style={{ minHeight: '60vh' }}>
-        <div className="spinner"></div>
+      <div style={styles.loginContainer}>
+        <div style={styles.loginCard}>
+          <div style={styles.loginLeft}>
+            <h2>Welcome Back</h2>
+            <p>Login to access your cart</p>
+          </div>
+
+          <div style={styles.loginRight}>
+            <h3>Login</h3>
+
+            <input
+              type="tel"
+              placeholder="Enter phone number"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              style={styles.input}
+            />
+
+            <button onClick={handleLogin} style={styles.button}>
+              Login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // 🔄 LOADING
+  if (cartLoading) return <h2>Loading...</h2>;
+
+  // 🛒 CART UI
   return (
-    <div className="cart-page animate-fade-in">
-      <div className="cart-header-bar">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          <RiArrowLeftLine /> Back
+    <div style={styles.container}>
+      {/* HEADER */}
+      <div style={styles.header}>
+        <h2>Your Cart</h2>
+        <button onClick={() => setShowLogoutBox(true)} style={styles.logoutBtn}>
+          Logout
         </button>
-        <h1><RiShoppingCartLine /> Shopping Cart</h1>
-        <span className="cart-count-text">{cartItems.length} item{cartItems.length !== 1 ? 's' : ''}</span>
       </div>
 
+      {/* EMPTY */}
       {cartItems.length === 0 ? (
-        <div className="empty-cart">
-          <div className="empty-cart-icon">🛒</div>
-          <h2>Your cart is empty</h2>
-          <p>Looks like you haven't added anything to your cart yet</p>
-          <Link to="/" className="btn btn-primary" style={{ marginTop: '16px' }}>
-            Continue Shopping
-          </Link>
+        <div style={styles.empty}>
+          <RiShoppingCartLine size={80} />
+          <h3>Cart is empty</h3>
         </div>
       ) : (
-        <div className="cart-layout">
-          <div className="cart-items-list">
+        <div style={styles.grid}>
+          <div>
             {cartItems.map((item) => {
-              if (!item.productId) return null;
               const product = item.productId;
-              const discountedPrice = getDiscountedPrice(product);
+              if (!product) return null;
 
               return (
-                <div key={item._id} className="cart-item-card">
-                  <div className="cart-item-image" onClick={() => navigate(`/product/${product._id}`)}>
-                    {product.images && product.images.length > 0 ? (
-                      <img src={product.images[0]} alt={product.name} />
-                    ) : (
-                      <div className="cart-item-placeholder">📦</div>
-                    )}
-                  </div>
-
-                  <div className="cart-item-details">
-                    <h3 onClick={() => navigate(`/product/${product._id}`)}>{product.name}</h3>
-                    <span className="cart-item-category">{product.category}</span>
-
-                    <div className="cart-item-price">
-                      <span className="cart-current-price">₹{Math.round(discountedPrice).toLocaleString()}</span>
-                      {product.discount > 0 && (
-                        <>
-                          <span className="cart-original-price">₹{product.price.toLocaleString()}</span>
-                          <span className="cart-discount-badge">{product.discount}% off</span>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="cart-item-actions">
-                      <div className="qty-controls">
-                        <button
-                          onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                        >
-                          <RiSubtractLine />
-                        </button>
-                        <span className="qty-value">{item.quantity}</span>
-                        <button
-                          onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
-                          disabled={item.quantity >= product.stock}
-                        >
-                          <RiAddLine />
-                        </button>
-                      </div>
-
-                      <button className="remove-btn" onClick={() => handleRemove(item._id)}>
-                        <RiDeleteBinLine /> Remove
-                      </button>
-                    </div>
+                <div key={item._id} style={styles.item}>
+                  <img src={product.images?.[0]} alt="" width="100" />
+                  <div>
+                    <h4>{product.name}</h4>
+                    <p>₹ {product.price}</p>
+                    <p>Qty: {item.quantity}</p>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="cart-summary">
-            <div className="cart-summary-card">
-              <h3>Price Details</h3>
-              <div className="summary-divider"></div>
+          <div style={styles.summary}>
+            <h3>Summary</h3>
+            <p>Total: ₹ {cartItems.reduce((t, i) => t + (i.productId?.price * i.quantity || 0), 0)}</p>
 
-              <div className="summary-row">
-                <span>Price ({cartItems.length} items)</span>
-                <span>₹{Math.round(subtotal).toLocaleString()}</span>
-              </div>
+            <button onClick={handlePlaceOrder} style={styles.placeBtn}>
+              Place Order
+            </button>
+          </div>
+        </div>
+      )}
 
-              <div className="summary-row discount-row">
-                <span>Discount</span>
-                <span className="discount-text">− ₹{Math.round(totalDiscount).toLocaleString()}</span>
-              </div>
+      {/* 🔥 LOGOUT POPUP */}
+      {showLogoutBox && (
+        <div style={styles.overlay}>
+          <div style={styles.popup}>
+            <h3>Confirm Logout</h3>
+            <p>Enter phone number to logout</p>
 
-              <div className="summary-row">
-                <span>Delivery</span>
-                <span className="free-text">{total >= 499 ? 'FREE' : '₹49'}</span>
-              </div>
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={logoutMobile}
+              onChange={(e) => setLogoutMobile(e.target.value)}
+              style={styles.input}
+            />
 
-              <div className="summary-divider"></div>
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <button onClick={handleConfirmLogout} style={styles.button}>
+                Confirm
+              </button>
 
-              <div className="summary-row total-row">
-                <strong>Total Amount</strong>
-                <strong>₹{Math.round(total < 499 ? total + 49 : total).toLocaleString()}</strong>
-              </div>
-
-              {totalDiscount > 0 && (
-                <div className="savings-text">
-                  You save ₹{Math.round(totalDiscount).toLocaleString()} on this order!
-                </div>
-              )}
-
-              <button
-                className="checkout-btn"
-                onClick={() => navigate('/checkout')}
-              >
-                Proceed to Checkout
+              <button onClick={() => setShowLogoutBox(false)}>
+                Cancel
               </button>
             </div>
           </div>
@@ -175,6 +182,36 @@ const CartPage = () => {
       )}
     </div>
   );
+};
+
+// 🎨 STYLES
+const styles = {
+  container: { padding: "20px" },
+  header: { display: "flex", justifyContent: "space-between" },
+  logoutBtn: { background: "red", color: "#fff", padding: "8px" },
+  grid: { display: "flex", gap: "20px" },
+  item: { display: "flex", gap: "10px", padding: "10px", borderBottom: "1px solid #ccc" },
+  summary: { border: "1px solid #ccc", padding: "10px" },
+  placeBtn: { background: "green", color: "#fff", padding: "10px" },
+
+  loginContainer: {
+    height: "100vh", display: "flex", justifyContent: "center", alignItems: "center"
+  },
+  loginCard: { display: "flex", width: "600px", background: "#fff" },
+  loginLeft: { flex: 1, background: "#2874f0", color: "#fff", padding: "30px" },
+  loginRight: { flex: 1, padding: "30px" },
+  input: { width: "100%", padding: "10px", marginBottom: "10px" },
+  button: { background: "#fb641b", color: "#fff", padding: "10px", border: "none" },
+
+  empty: { textAlign: "center", marginTop: "50px" },
+
+  overlay: {
+    position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+    background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center"
+  },
+  popup: {
+    background: "#fff", padding: "20px", borderRadius: "10px", width: "300px", textAlign: "center"
+  }
 };
 
 export default CartPage;
